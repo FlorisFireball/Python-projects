@@ -4,7 +4,6 @@ Made by FlorisFireball
 
 I can change:
   - Automate movement, not from input of keys
-    - Show next move (see if you will run into yourself)
 """
 
 from time import sleep;
@@ -44,8 +43,8 @@ class _GetchWindows:
         return msvcrt.getch()
 getch = _Getch();
 lose = False; #obviously...
-round = 0;
-facing = "U";
+round = 0; #optional, for keeping score?
+#facing = "U"; #unused.
 sEmpty = "--"#input("--Empty: "+"--")[:2]; #this allows for complete configuration, changing your field every time you play
 sApple = "xx"#input("xxApple: "+"xx")[:2];
 sHead = "[]"#input("[]Head: "+"[]")[:2];
@@ -62,10 +61,11 @@ def restart():
     inputy = int(input("Y grid size (height): "));
     Board = {
     1:[0]
-    };
-    for x in range(inputy):
-        Board[x+1] = [0]*inputx
+    }; #Set 1 grid to prevent crash of KeyError/IndexError
+    for x in range(inputy): #is the height, repeating for each row
+        Board[x+1] = [0]*inputx #is the width
     size = inputx*inputy
+    #multiply to find out size of board. Used to see when user "wins"
     Board[PlayerY][PlayerX] = Length;
     spawnCookie();
 
@@ -76,19 +76,28 @@ def direction(move):
         getch()
         move = getch()
         if move in key:
-            if move == key[0]: PlayerY -= 1;
-            if move == key[1]: PlayerY += 1;
-            if move == key[2]: PlayerX += 1;
-            if move == key[3]: PlayerX -= 1;
-            if move == key[4]: lose = True;
+            #arrow keys use a code: \033[#, where # is a letter. Tab uses the same: \033[Z
+            #depending on letter code, change the position of the head in the grid.
+            if move == key[0]:
+                PlayerY -= 1;
+            if move == key[1]:
+                PlayerY += 1;
+            if move == key[2]:
+                PlayerX += 1;
+            if move == key[3]:
+                PlayerX -= 1;
+            if move == key[4]:
+                #if Shift+Tab is pressed, set lose to True and exit the game
+                lose = True;
             try:
                 if Board[PlayerY][PlayerX] == -1:
+                    #If position of the head is occupied by a cookie, increase snake length.
                     Length += 1;
                     spawnCookie();
                 elif Board[PlayerY][PlayerX] > 1 and Board[PlayerY][PlayerX] < Length-1:
                     lose = True;
-                    pass;
-                elif Board[PlayerY][PlayerX] == Length-1: #undo movement at beginning so you stay in bounds
+                elif Board[PlayerY][PlayerX] == Length-1:
+                    #undo movement to prevent moving backwards and lose.
                     if move == key[0]: PlayerY += 1;
                     if move == key[1]: PlayerY -= 1;
                     if move == key[2]: PlayerX -= 1;
@@ -98,6 +107,7 @@ def direction(move):
                     round+=1;
                 Board[PlayerY][PlayerX] = Length
             except KeyError:
+                #if Head position is out of bounds
                 lose = True;
                 print("You hit the wall,",end=' ');
             except IndexError:
@@ -105,6 +115,7 @@ def direction(move):
                 print("You hit the wall,",end=' ');
 
 def Move():
+    #lower the value of each number above 0
     for y in Board:
         for x in range(len(Board[y])):
             if Board[y][x] > 0:
@@ -117,22 +128,28 @@ def printscreen():
         for x in Board[y]:
             if x == 0:
                 print("\033[0m"+sEmpty+"\033[0m", end='');
+                #if the item in the grid has no value / is 0, then it's empty, and printed as -- by default
             elif x == Length:
                 print("\033[0;38;42m"+sHead, end='');
+                #if it has the value of head / the length, which is the highest, print the value for head []
             elif x == 1:
                 print("\033[0;38;42m"+sTail, end='');
+                #same thing here, but print 'sTail' instead
             elif x == -1:
                 print("\033[0;35;41m"+sApple, end='');
+                #if the value is -1, the value of an apple, it prints xx for visual
             else:
                 print("\033[0;32;42m"+sBody, end='');
+                #if none is printed, it mustn't be the tail, head, empty, or the candy, and must instead be the body of the snake.
         print("\033[0m");
     print;
+    #last print to print an enter, otherwise it's a continuous line instead of a grid of multiple high.
 
 def spawnCookie():
     global PlayerY
     temp = 0;
-    print(Length,size)
-    while Length<size: #test if snake is longer than grid count
+    #test if snake is longer than grid count, prevent continuous searching for new place for apple
+    while Length<size:
         temp+=1;
         row = randint(1,len(Board));
         col = randint(0,len(Board[PlayerY]))-1;
@@ -147,6 +164,9 @@ while True:
     if lose == True:
         print("You lost! Too bad :(");
         break
+    #if the snake is bigger than the grid, set win 1
+    #if the snake has been able to move its entire body after the startup, set win 2
+    # this is to ensure at least movement has been done before grabbing all candies and winning.
     if (Length >= size) and (round >= size-1):
         printscreen();
         print("Great job! You got the snake to the ultimate size!");
